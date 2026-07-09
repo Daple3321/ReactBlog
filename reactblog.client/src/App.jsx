@@ -6,7 +6,7 @@ import BlogButton from './components/BlogButton.jsx'
 import BlogView from './components/BlogView.jsx'
 import NewBlogForm from './components/NewBlogForm.jsx'
 import EditBlogForm from './components/EditBlogForm.jsx'; 
-import { PageProvider, removeBlog } from './blogTools.jsx';
+import { removeBlog } from './blogTools.jsx';
 
 
 export default function App() {
@@ -37,8 +37,8 @@ export default function App() {
         setPage(2);
     }
     
-    function onRemoveClicked(blog){
-        removeBlog(blog.id)
+    async function onRemoveClicked(blog){
+        await removeBlog(blog.id);
         setCurrentBlog(undefined);
         setPage(0);
     }

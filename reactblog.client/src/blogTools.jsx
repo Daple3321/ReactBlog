@@ -1,5 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
-import App from './App.jsx'
+import { createContext, useState, useContext } from 'react';
 
 const PageContext = createContext();
 const CurrentBlogContext = createContext();
@@ -50,11 +49,4 @@ export async function removeBlog(blogId) {
     const response = await fetch(`/blogs/${blogId}`, {
             method: "DELETE",
         });
-}
-
-export function switchPageToBlog(blog){
-    const {setCurrentPage} = usePage();
-    const {setCurrentBlog} = useBlog();
-    setCurrentPage(blog.blogId);
-    setCurrentBlog(blog);
 }

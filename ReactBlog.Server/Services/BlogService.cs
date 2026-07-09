@@ -1,64 +1,67 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ReactBlog.Server.DTOs;
+﻿using Microsoft.EntityFrameworkCore;
+using ReactBlog.Server.Data;
+using ReactBlog.Server.Data.DTOs;
+using ReactBlog.Server.Data.Models;
 
-namespace ReactBlog.Server.Services
+namespace ReactBlog.Server.Services;
+
+public interface IBlogService
 {
-    public class BlogService
+    Task<IEnumerable<Blog>> GetAllAsync();
+    Task<Blog?> GetBlogAsync(int id);
+
+    Task AddBlog(Blog newBlog);
+
+    Task<bool> RemoveBlog(int blogId);
+
+    Task<Blog?> UpdateBlog(int id, NewBlogDto newBlog);
+}
+
+public class BlogService(BlogContext blogContext) : IBlogService
+{
+    public async Task<IEnumerable<Blog>> GetAllAsync()
     {
-        private readonly BlogContext _context;
-
-        public BlogService(BlogContext blogContext)
-        {
-            _context = blogContext;
-        }
-
-        public async Task<IEnumerable<Blog>> GetAllAsync()
-        {
-            return await _context.Blogs
+        return await blogContext.Blogs
             .AsNoTracking()
             .ToListAsync();
-        }
+    }
 
-        public async Task<Blog?> GetBlogAsync(int id)
-        {
-            return await _context.Blogs
+    public async Task<Blog?> GetBlogAsync(int id)
+    {
+        return await blogContext.Blogs
             .FindAsync(id);
-        }
+    }
 
-        public Blog? GetBlog(int id)
+    public async Task AddBlog(Blog newBlog)
+    {
+        blogContext.Blogs.Add(newBlog);
+        
+        await blogContext.SaveChangesAsync();
+    }
+
+    public async Task<bool> RemoveBlog(int blogId)
+    {
+        var blog = await GetBlogAsync(blogId);
+        if (blog == null) return false;
+        
+        blogContext.Blogs.Remove(blog);
+        
+        await blogContext.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<Blog?> UpdateBlog(int id, NewBlogDto newBlog)
+    {
+        var blogToUpdate = await GetBlogAsync(id);
+        if(blogToUpdate != null)
         {
-            return _context.Blogs.Find(id);
+            blogToUpdate.LastUpdatedAt = DateTime.Now;
+            blogToUpdate.Name = newBlog.Name;
+            blogToUpdate.Content = newBlog.Content;
         }
+        await blogContext.SaveChangesAsync();
 
-        public void AddBlog(Blog newBlog)
-        {
-            _context.Blogs.Add(newBlog);
-            _context.SaveChanges();
-        }
-
-        public void RemoveBlog(Blog blog)
-        {
-            if (blog != null)
-            {
-                _context.Blogs.Remove(blog);
-                _context.SaveChanges();
-            }
-        }
-
-        public async Task<Blog?> UpdateBlog(int id, NewBlogDto newBlog)
-        {
-            Blog blogToUpdate = await GetBlogAsync(id);
-            if(blogToUpdate != null)
-            {
-                blogToUpdate.LastUpdatedAt = DateTime.Now;
-                blogToUpdate.Name = newBlog.Name;
-                blogToUpdate.Content = newBlog.Content;
-            }
-            await _context.SaveChangesAsync();
-
-            return blogToUpdate;
-        }
+        return blogToUpdate;
     }
 }

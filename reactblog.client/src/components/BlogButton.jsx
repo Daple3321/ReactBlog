@@ -1,16 +1,8 @@
-import { useEffect, useState } from 'react';
-
-export default function BlogButton({ b, onBlogClicked }) {
-    const [blog, setBlog] = useState(b);
-
-    function handleClick() {
-        console.log("Clicked on blog with id: " + blog.id)
-    }
-    
+export default function BlogButton({ b: blog, onBlogClicked }) {
     return (
-        <button id="blogBtn" onClick={()=> onBlogClicked(blog)}>
-            <h1>{blog.name}</h1>
-            <p>Created at: {blog.createdAt}</p>
+        <button className="blog-card" onClick={() => onBlogClicked(blog)}>
+            <h2>{blog.name}</h2>
+            <p className="blog-date">Created: {new Date(blog.createdAt).toLocaleDateString()}</p>
         </button>
     );
 }

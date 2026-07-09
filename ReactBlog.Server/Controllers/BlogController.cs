@@ -1,78 +1,59 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ReactBlog.Server.DTOs;
+using ReactBlog.Server.Data.DTOs;
+using ReactBlog.Server.Data.Models;
 using ReactBlog.Server.Services;
 
-namespace ReactBlog.Server.Controllers
+namespace ReactBlog.Server.Controllers;
+
+[ApiController]
+[Route("blogs")]
+public class BlogController(IBlogService blogService, ILogger<BlogController> logger) : ControllerBase
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class BlogController : ControllerBase
+    [HttpGet]
+    public async Task<IEnumerable<Blog>> GetBlogsAsync()
     {
-        private readonly BlogService blogService;
-        private readonly ILogger<BlogController> _logger;
-        public BlogController(BlogService blogService, ILogger<BlogController> logger)
-        {
-            this.blogService = blogService;
-            _logger = logger;
-        }
+        return await blogService.GetAllAsync();
+    }
 
-        [HttpGet]
-        [Route("/blogs/all")]
-        public async Task<IEnumerable<Blog>> GetBlogsAsync()
-        {
-            _logger.Log(LogLevel.Information, "Getting all blogs");
-            return await blogService.GetAllAsync();
-        }
+    [HttpGet("{blogId:int}")]
+    public async Task<ActionResult<Blog>> GetBlog(int blogId)
+    {
+        var foundBlog = await blogService.GetBlogAsync(blogId);
+        if (foundBlog != null) return Ok(foundBlog);
+        
+        logger.LogInformation("Blog with id {blogId} not found.", blogId);
+        return NotFound($"Blog with id {blogId} not found");
+    }
 
-        [HttpGet]
-        [Route("/blogs/{id}")]
-        public async Task<ActionResult<Blog>> GetBlog(int id)
-        {
-            Blog foundBlog = await blogService.GetBlogAsync(id);
-            if(foundBlog == null) {
-                _logger.Log(LogLevel.Warning, $"Blog with id {id} not found.");
-                return NotFound(); 
-            }
-            else
-            {
-                _logger.Log(LogLevel.Information, $"Getting blog with id {foundBlog.Id}", foundBlog.Id);
-                return Ok(foundBlog);
-            }
-        }
+    [HttpPost]
+    public async Task<ActionResult<Blog>> AddBlog([FromForm] NewBlogDto blogDto)
+    {
+        if (blogDto == null || string.IsNullOrEmpty(blogDto.Name)) { return BadRequest(); }
 
-        [HttpPost]
-        [Route("/blogs/new")]
-        public IActionResult AddBlog([FromForm] NewBlogDto blogDto)
-        {
-            if (blogDto == null) { return BadRequest(); }
-            //if(newBlog.LastUpdatedAt == default || newBlog.CreatedAt == default) { return BadRequest("createdAt or lastUpdatedAt dates are not specified"); }
-            Blog newBlog = new Blog { Id = 0, Name = blogDto.Name, Content = blogDto.Content, CreatedAt = DateTime.Now, LastUpdatedAt = DateTime.Now };
+        var newBlog = new Blog { Id = 0, Name = blogDto.Name, Content = blogDto.Content, CreatedAt = DateTime.Now, LastUpdatedAt = DateTime.Now };
 
-            blogService.AddBlog(newBlog);
-            return CreatedAtAction(nameof(GetBlog), new { id = newBlog.Id }, newBlog);
-        }
+        await blogService.AddBlog(newBlog);
+        
+        return CreatedAtAction(nameof(GetBlog), new { blogId = newBlog.Id }, newBlog);
+    }
 
-        [HttpPut]
-        [Route("/blogs/{id}")]
-        public async Task<IActionResult> UpdateBlog([FromRoute] int id, [FromForm] NewBlogDto updatedBlog)
-        {
-            if (updatedBlog == null) { return BadRequest(); }
-            
-            //Blog newBlog = new Blog { Id = 0, Name = blogDto.Name, Content = blogDto.Content, CreatedAt = DateTime.Now, LastUpdatedAt = DateTime.Now };
+    [HttpPut("{blogId:int}")]
+    public async Task<ActionResult<Blog>> UpdateBlog(int blogId, [FromForm] NewBlogDto updatedBlog)
+    {
+        if (updatedBlog == null) { return BadRequest(); }
+        
+        var blog = await blogService.UpdateBlog(blogId, updatedBlog);
+        
+        if (blog == null) return NotFound($"Blog {blogId} not found");
+        return Ok(blog);
+    }
 
-            Blog finalBlog = await blogService.UpdateBlog(id, updatedBlog);
-            return CreatedAtAction(nameof(GetBlog), new { id = finalBlog.Id }, finalBlog);
-        }
-
-        [HttpDelete]
-        [Route("/blogs/{id}")]
-        public async Task<IActionResult> RemoveBlog(int id)
-        {
-            Blog foundBlog = await blogService.GetBlogAsync(id);
-            if (foundBlog == null) { return BadRequest(); }
-
-            blogService.RemoveBlog(foundBlog);
-            return Ok();
-        }
+    [HttpDelete("{blogId:int}")]
+    public async Task<IActionResult> RemoveBlog(int blogId)
+    {
+        var deleted = await blogService.RemoveBlog(blogId);
+        if (!deleted) { return BadRequest($"Blog {blogId} not found"); }
+        
+        return Ok("Blog deleted.");
     }
 }
