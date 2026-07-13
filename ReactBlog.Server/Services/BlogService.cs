@@ -10,7 +10,7 @@ public interface IBlogService
     Task<IEnumerable<Blog>> GetAllAsync();
     Task<Blog?> GetBlogAsync(int id);
 
-    Task AddBlog(Blog newBlog);
+    Task<Blog> AddBlog(Blog newBlog);
 
     Task<bool> RemoveBlog(int blogId);
 
@@ -28,15 +28,19 @@ public class BlogService(BlogContext blogContext) : IBlogService
 
     public async Task<Blog?> GetBlogAsync(int id)
     {
+        if (id < 0) return null;
+        
         return await blogContext.Blogs
             .FindAsync(id);
     }
 
-    public async Task AddBlog(Blog newBlog)
+    public async Task<Blog> AddBlog(Blog newBlog)
     {
         blogContext.Blogs.Add(newBlog);
         
         await blogContext.SaveChangesAsync();
+
+        return newBlog;
     }
 
     public async Task<bool> RemoveBlog(int blogId)
@@ -54,12 +58,12 @@ public class BlogService(BlogContext blogContext) : IBlogService
     public async Task<Blog?> UpdateBlog(int id, NewBlogDto newBlog)
     {
         var blogToUpdate = await GetBlogAsync(id);
-        if(blogToUpdate != null)
-        {
-            blogToUpdate.LastUpdatedAt = DateTime.Now;
-            blogToUpdate.Name = newBlog.Name;
-            blogToUpdate.Content = newBlog.Content;
-        }
+        if (blogToUpdate == null) return null;
+        
+        blogToUpdate.LastUpdatedAt = DateTime.Now;
+        blogToUpdate.Name = newBlog.Name;
+        blogToUpdate.Content = newBlog.Content;
+        
         await blogContext.SaveChangesAsync();
 
         return blogToUpdate;

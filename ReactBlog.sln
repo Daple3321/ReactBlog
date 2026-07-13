@@ -7,6 +7,8 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "reactblog.client", "reactbl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactBlog.Server", "ReactBlog.Server\ReactBlog.Server.csproj", "{A8B534FC-85A8-4166-9F03-67435A9360DD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReactBlog.Server.Tests", "ReactBlog.Server.Tests\ReactBlog.Server.Tests.csproj", "{6F1EA97B-3F74-49B9-A61F-FF9326AF3D2C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{A8B534FC-85A8-4166-9F03-67435A9360DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8B534FC-85A8-4166-9F03-67435A9360DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8B534FC-85A8-4166-9F03-67435A9360DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F1EA97B-3F74-49B9-A61F-FF9326AF3D2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F1EA97B-3F74-49B9-A61F-FF9326AF3D2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F1EA97B-3F74-49B9-A61F-FF9326AF3D2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F1EA97B-3F74-49B9-A61F-FF9326AF3D2C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
