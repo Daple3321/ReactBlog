@@ -1,12 +1,17 @@
 import { useState } from 'react';
+import { authorizedFetch } from '../blogTools.jsx';
 
-export default function EditBlogForm({ blogToEdit, onUpdated }) {
+export default function EditBlogForm({ blogToEdit, onUpdated, token }) {
     const [error, setError] = useState(null);
 
     async function updateBlogRequest(formData) {
         setError(null);
         try {
-            const response = await fetch(`/blogs/${blogToEdit.id}`, { method: 'PUT', body: formData });
+            const response = await authorizedFetch(
+                `/blogs/${blogToEdit.id}`,
+                token,
+                { method: 'PUT', body: formData },
+            );
             if (response.ok) {
                 onUpdated(await response.json());
             } else {

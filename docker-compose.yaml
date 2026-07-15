@@ -1,0 +1,15 @@
+﻿services:
+  keycloak:
+    user: root # dev only
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    ports:
+      - "8080:8080" 
+      - "9000:9000"
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: true 
+    volumes:
+      - ./containers/identity:/opt/keycloak/data

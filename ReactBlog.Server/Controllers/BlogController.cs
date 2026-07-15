@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using ReactBlog.Server.Data.DTOs;
 using ReactBlog.Server.Data.Models;
 using ReactBlog.Server.Services;
@@ -6,19 +8,22 @@ using ReactBlog.Server.Services;
 namespace ReactBlog.Server.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("blogs")]
 public class BlogController(IBlogService blogService, ILogger<BlogController> logger) : ControllerBase
 {
+    private string OwnerId => User.FindFirstValue("sub")!;
+
     [HttpGet]
     public async Task<IEnumerable<Blog>> GetBlogsAsync()
     {
-        return await blogService.GetAllAsync();
+        return await blogService.GetAllAsync(OwnerId);
     }
 
     [HttpGet("{blogId:int}")]
     public async Task<ActionResult<Blog>> GetBlog(int blogId)
     {
-        var foundBlog = await blogService.GetBlogAsync(blogId);
+        var foundBlog = await blogService.GetBlogAsync(blogId, OwnerId);
         if (foundBlog != null) return Ok(foundBlog);
         
         logger.LogInformation("Blog with id {blogId} not found.", blogId);
@@ -30,7 +35,15 @@ public class BlogController(IBlogService blogService, ILogger<BlogController> lo
     {
         if (blogDto == null || string.IsNullOrEmpty(blogDto.Name)) { return BadRequest(); }
 
-        var newBlog = new Blog { Id = 0, Name = blogDto.Name, Content = blogDto.Content, CreatedAt = DateTime.Now, LastUpdatedAt = DateTime.Now };
+        var newBlog = new Blog
+        {
+            Id = 0,
+            OwnerId = OwnerId,
+            Name = blogDto.Name,
+            Content = blogDto.Content,
+            CreatedAt = DateTime.Now,
+            LastUpdatedAt = DateTime.Now
+        };
 
         await blogService.AddBlog(newBlog);
         
@@ -42,7 +55,7 @@ public class BlogController(IBlogService blogService, ILogger<BlogController> lo
     {
         if (updatedBlog == null) { return BadRequest(); }
         
-        var blog = await blogService.UpdateBlog(blogId, updatedBlog);
+        var blog = await blogService.UpdateBlog(blogId, updatedBlog, OwnerId);
         
         if (blog == null) return NotFound($"Blog {blogId} not found");
         return Ok(blog);
@@ -51,8 +64,8 @@ public class BlogController(IBlogService blogService, ILogger<BlogController> lo
     [HttpDelete("{blogId:int}")]
     public async Task<IActionResult> RemoveBlog(int blogId)
     {
-        var deleted = await blogService.RemoveBlog(blogId);
-        if (!deleted) { return BadRequest($"Blog {blogId} not found"); }
+        var deleted = await blogService.RemoveBlog(blogId, OwnerId);
+        if (!deleted) { return NotFound($"Blog {blogId} not found"); }
         
         return Ok("Blog deleted.");
     }

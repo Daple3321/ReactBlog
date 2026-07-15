@@ -38,15 +38,22 @@ export function useBlog() {
 
 
 
-export async function getBlog(blogId) {
-    const response = await fetch(`/blogs/${blogId}`, {
+export function authorizedFetch(url, token, options = {}) {
+    return fetch(url, {
+        ...options,
+        headers: { ...options.headers, Authorization: `Bearer ${token}` },
+    });
+}
+
+export async function getBlog(blogId, token) {
+    const response = await authorizedFetch(`/blogs/${blogId}`, token, {
             method: "GET",
         });
     return await response.json();
 }
 
-export async function removeBlog(blogId) {
-    const response = await fetch(`/blogs/${blogId}`, {
+export async function removeBlog(blogId, token) {
+    return authorizedFetch(`/blogs/${blogId}`, token, {
             method: "DELETE",
         });
 }

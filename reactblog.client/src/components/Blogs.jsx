@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import BlogButton from './BlogButton';
+import { authorizedFetch } from '../blogTools.jsx';
 
-export default function Blogs({ onBlogClicked }) {
+export default function Blogs({ onBlogClicked, token }) {
     const [blogs, setBlogs] = useState(null);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetch('/blogs')
+        authorizedFetch('/blogs', token)
             .then(r => r.ok ? r.json() : Promise.reject(r.status))
             .then(setBlogs)
             .catch(e => setError(`Failed to load blogs (${e})`));
-    }, []);
+    }, [token]);
 
     const blogContents = error
         ? <p style={{ color: 'salmon' }}>{error}</p>

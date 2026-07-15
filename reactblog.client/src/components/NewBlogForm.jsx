@@ -1,12 +1,13 @@
 import { useState } from 'react';
+import { authorizedFetch } from '../blogTools.jsx';
 
-export default function NewBlogForm({ onCreated }) {
+export default function NewBlogForm({ onCreated, token }) {
     const [error, setError] = useState(null);
 
     async function postRequest(formData) {
         setError(null);
         try {
-            const response = await fetch('/blogs', { method: 'POST', body: formData });
+            const response = await authorizedFetch('/blogs', token, { method: 'POST', body: formData });
             if (response.ok) {
                 onCreated(await response.json());
             } else {

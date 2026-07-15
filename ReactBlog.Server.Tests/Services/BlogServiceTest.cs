@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,8 +17,18 @@ namespace ReactBlog.Server.Tests.Services;
 [TestSubject(typeof(BlogService))]
 public class BlogServiceTest
 {
-    private static BlogContext CreateDb(string dbName) =>
-        new(new DbContextOptionsBuilder<BlogContext>().UseSqlite().Options);
+    private const string OwnerA = "keycloak-user-a";
+    private const string OwnerB = "keycloak-user-b";
+
+    private static BlogContext CreateDb(string _)
+    {
+        var connection = new SqliteConnection("Filename=:memory:");
+        connection.Open();
+        return new BlogContext(
+            new DbContextOptionsBuilder<BlogContext>()
+                .UseSqlite(connection, contextOwnsConnection: true)
+                .Options);
+    }
 
     private static BlogService CreateService(BlogContext db) => new(db);
     
@@ -25,6 +36,7 @@ public class BlogServiceTest
     {
         var blog = new Blog()
         {
+            OwnerId = OwnerA,
             Name = "TestBlog",
             Content = "Some test content!",
             CreatedAt = DateTime.Now,
@@ -40,7 +52,7 @@ public class BlogServiceTest
     {
         await using var db = CreateDb(nameof(GetBlogAsync_Item_Missing));
         
-        var blog = await CreateService(db).GetBlogAsync(1000);
+        var blog = await CreateService(db).GetBlogAsync(1000, OwnerA);
         
         Assert.Null(blog);
     }
@@ -50,7 +62,7 @@ public class BlogServiceTest
     {
         await using var db = CreateDb(nameof(GetBlogAsync_Item_Missing));
         
-        var blog = await CreateService(db).GetBlogAsync(-15);
+        var blog = await CreateService(db).GetBlogAsync(-15, OwnerA);
         
         Assert.Null(blog);
     }
@@ -61,7 +73,18 @@ public class BlogServiceTest
         await using var db = CreateDb(nameof(GetBlogAsync_Item_Missing));
         SeedBlog(db);
         
-        var blog = await CreateService(db).GetBlogAsync(1);
+        var service = CreateService(db);
+
+        var newBlog = await service.AddBlog(new Blog()
+        {
+            OwnerId = OwnerA,
+            Name = "Test Blog",
+            Content = "asdasda",
+            CreatedAt = DateTime.Now,
+            LastUpdatedAt = DateTime.Now
+        });
+
+        var blog = await service.GetBlogAsync(newBlog.Id, OwnerA);
         
         Assert.NotNull(blog);
     }
@@ -74,6 +97,7 @@ public class BlogServiceTest
 
         var newBlog = await service.AddBlog(new Blog()
         {
+            OwnerId = OwnerA,
             Name = "Test Blog",
             Content = "asdasda",
             CreatedAt = DateTime.Now,
@@ -93,14 +117,15 @@ public class BlogServiceTest
         
         var newBlog = await service.AddBlog(new Blog()
         {
+            OwnerId = OwnerA,
             Name = "Test Blog",
             Content = "asdasda",
             CreatedAt = DateTime.Now,
             LastUpdatedAt = DateTime.Now
         });
         
-        var removed = await service.RemoveBlog(newBlog.Id);
-        var blog = await service.GetBlogAsync(1);
+        var removed = await service.RemoveBlog(newBlog.Id, OwnerA);
+        var blog = await service.GetBlogAsync(newBlog.Id, OwnerA);
         
         Assert.True(removed, "Blog wasn't removed. False returned");
         Assert.Null(blog);
@@ -112,7 +137,7 @@ public class BlogServiceTest
         await using var db = CreateDb(nameof(GetBlogAsync_Item_Missing));
         var service = CreateService(db);
         
-        var removed = await service.RemoveBlog(1);
+        var removed = await service.RemoveBlog(1, OwnerA);
         
         Assert.False(removed, "Blog was removed. True returned");
     }
@@ -127,7 +152,7 @@ public class BlogServiceTest
         {
             Name = "Updated Name",
             Content = "Updated Content"
-        });
+        }, OwnerA);
 
         Assert.Null(updateBlog);
     }
@@ -141,6 +166,7 @@ public class BlogServiceTest
         var creationTime = DateTime.Now;
         var newBlog = await service.AddBlog(new Blog()
         {
+            OwnerId = OwnerA,
             Name = "Test Blog",
             Content = "asdasda",
             CreatedAt = creationTime,
@@ -151,11 +177,38 @@ public class BlogServiceTest
         {
             Name = "Updated Name",
             Content = "Updated Content"
-        });
+        }, OwnerA);
 
         Assert.NotNull(updateBlog);
         Assert.True(updateBlog.Name == "Updated Name", "Name field wasn't updated");
         Assert.True(updateBlog.Content == "Updated Content", "Content field wasn't updated");
         Assert.True(updateBlog.LastUpdatedAt != creationTime, "LastUpdateAt field wasn't updated");
+    }
+
+    [Fact]
+    public async Task BlogOperations_DoNotCrossOwnerBoundary()
+    {
+        await using var db = CreateDb(nameof(BlogOperations_DoNotCrossOwnerBoundary));
+        var service = CreateService(db);
+        var blog = await service.AddBlog(new Blog
+        {
+            OwnerId = OwnerA,
+            Name = "Private blog",
+            Content = "Owner A only",
+            CreatedAt = DateTime.Now,
+            LastUpdatedAt = DateTime.Now
+        });
+
+        var found = await service.GetBlogAsync(blog.Id, OwnerB);
+        var updated = await service.UpdateBlog(
+            blog.Id,
+            new NewBlogDto { Name = "Stolen", Content = "Changed" },
+            OwnerB);
+        var removed = await service.RemoveBlog(blog.Id, OwnerB);
+
+        Assert.Null(found);
+        Assert.Null(updated);
+        Assert.False(removed);
+        Assert.NotNull(await service.GetBlogAsync(blog.Id, OwnerA));
     }
 }

@@ -1,17 +1,39 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import './App.css';
 import Blogs from './components/Blogs';
 import NavBar from './components/NavBar.jsx'
-import BlogButton from './components/BlogButton.jsx'
 import BlogView from './components/BlogView.jsx'
 import NewBlogForm from './components/NewBlogForm.jsx'
 import EditBlogForm from './components/EditBlogForm.jsx'; 
 import { removeBlog } from './blogTools.jsx';
+import { useAuth } from "react-oidc-context";
 
 
 export default function App() {
+    const auth = useAuth();
     const [pageId, setPage] = useState(0);
     const [currentBlog, setCurrentBlog] = useState();
+
+    if (auth.isLoading) {
+        return <div>Loading holding patterns...</div>;
+    }
+
+    if (auth.hasError) {
+        return <div>Oops! {auth.error.message}</div>;
+    }
+
+    if (!auth.isAuthenticated) {
+        return (
+            <div>
+                <button onClick={() => auth.signinRedirect()}>Log in</button>
+                <button onClick={() => auth.signinRedirect({ extraQueryParams: { kc_action: 'register' } })}>
+                    Register
+                </button>
+            </div>
+        );
+    }
+
+    const token = auth.user.access_token;
     
     function onBlogsClick() {
         setPage(0);
@@ -38,47 +60,32 @@ export default function App() {
     }
     
     async function onRemoveClicked(blog){
-        await removeBlog(blog.id);
+        await removeBlog(blog.id, token);
         setCurrentBlog(undefined);
         setPage(0);
     }
 
+    let page;
     if (pageId == 0) {
-        return (
-            <div>
-                <NavBar onBlogsClick={onBlogsClick} onNewBlogClick={onNewBlogClick} />
-                <Blogs onBlogClicked={(blog) => onBlogClicked(blog)} />
-            </div>
-        );
+        page = <Blogs token={token} onBlogClicked={onBlogClicked} />;
     }
     else if (pageId == 1){
-        return (
-            <div>
-                <NavBar onBlogsClick={onBlogsClick} onNewBlogClick={onNewBlogClick} />
-                <NewBlogForm onCreated={b=>onBlogCreated(b)}/>
-            </div>
-        );
+        page = <NewBlogForm token={token} onCreated={onBlogCreated} />;
     }
     else if (pageId == 2) {
-        return (
-            <div>
-                <NavBar onBlogsClick={onBlogsClick} onNewBlogClick={onNewBlogClick} />
-                <BlogView blog={currentBlog} onEditClick={b=> onEditClicked(b)} onRemoveClick={b=>onRemoveClicked(b)}/>
-            </div>
-        );
+        page = <BlogView blog={currentBlog} onEditClick={onEditClicked} onRemoveClick={onRemoveClicked} />;
     }
     else if (pageId == 3) {
-        return (
-            <div>
-                <NavBar onBlogsClick={onBlogsClick} onNewBlogClick={onNewBlogClick} />
-                <EditBlogForm blogToEdit={currentBlog} onUpdated={b => onBlogUpdated(b)} />
-            </div>
-        );
+        page = <EditBlogForm token={token} blogToEdit={currentBlog} onUpdated={onBlogUpdated} />;
     }
-    /*return (
+
+    return (
         <div>
-            <h1 id="tableLabel">Blogs</h1>
-            {blogContents}
+            <h1>Welcome, {auth.user.profile.preferred_username ?? auth.user.profile.name}!</h1>
+            <button onClick={() => auth.signoutRedirect()}>Log out</button>
+            <h2>My Blogs</h2>
+            <NavBar onBlogsClick={onBlogsClick} onNewBlogClick={onNewBlogClick} />
+            {page}
         </div>
-    );*/
+    );
 }
