@@ -17,6 +17,7 @@ public class BlogController(IBlogService blogService, ILogger<BlogController> lo
     [HttpGet]
     public async Task<IEnumerable<Blog>> GetBlogsAsync()
     {
+        logger.LogInformation("Getting all blogs with OwnerId = {id}", OwnerId);
         return await blogService.GetAllAsync(OwnerId);
     }
 

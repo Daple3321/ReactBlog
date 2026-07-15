@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using ReactBlog.Server.Data;
+using ReactBlog.Server.Middleware;
 using ReactBlog.Server.Services;
 
 namespace ReactBlog.Server;
@@ -32,11 +33,14 @@ public class Program
         builder.Services.AddAuthorization();
 
         builder.Services.AddControllers();
+        
+        builder.Services.AddTransient<UserMiddleware>();
 
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
         builder.Services.AddScoped<IBlogService, BlogService>();
+        builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddSqlite<BlogContext>("Data Source=Blogs.db");
 
         var app = builder.Build();
@@ -55,9 +59,9 @@ public class Program
             app.UseSwaggerUI();
         }
 
+        app.UseMiddleware<UserMiddleware>();
+        
         app.UseHttpsRedirection();
-
-        //app.UseAuthorization();
 
         app.MapControllers();
 

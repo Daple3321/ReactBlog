@@ -6,6 +6,8 @@ namespace ReactBlog.Server.Data;
 public class BlogContext : DbContext
 {
     public DbSet<Blog> Blogs { get; set; } = null!;
+    public DbSet<User> Users { get; set; }
+    public DbSet<Follow> Follows { get; set; }
     
     public BlogContext(DbContextOptions<BlogContext> options) : base(options) 
     { 
@@ -14,6 +16,23 @@ public class BlogContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(builder);
+        builder.Entity<Follow>(entity =>
+        {
+            entity.HasKey(f => new { f.FollowerId, f.FollowingId });
+                
+            // Configure foreign key relationships
+            entity
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(f => f.FollowerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(f => f.FollowingId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+        
     }
 }
