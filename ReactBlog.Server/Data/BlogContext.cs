@@ -16,20 +16,30 @@ public class BlogContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        builder.Entity<User>(entity =>
+        {
+            entity
+                .HasIndex(u => u.Username)
+                .IsUnique();
+
+            entity
+                .HasIndex(u => u.Email)
+                .IsUnique();
+        });
+        
         builder.Entity<Follow>(entity =>
         {
             entity.HasKey(f => new { f.FollowerId, f.FollowingId });
-                
-            // Configure foreign key relationships
+            
             entity
                 .HasOne<User>()
-                .WithMany()
+                .WithMany(u => u.Following)
                 .HasForeignKey(f => f.FollowerId)
                 .OnDelete(DeleteBehavior.Restrict);
-
+            
             entity
                 .HasOne<User>()
-                .WithMany()
+                .WithMany(u => u.Followers)
                 .HasForeignKey(f => f.FollowingId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import Blogs from './components/Blogs';
 import NavBar from './components/NavBar.jsx'
 import BlogView from './components/BlogView.jsx'
 import NewBlogForm from './components/NewBlogForm.jsx'
 import EditBlogForm from './components/EditBlogForm.jsx'; 
-import { removeBlog } from './blogTools.jsx';
+import { ensureMe, removeBlog } from './blogTools.jsx';
 import { useAuth } from "react-oidc-context";
 
 
@@ -13,6 +13,35 @@ export default function App() {
     const auth = useAuth();
     const [pageId, setPage] = useState(0);
     const [currentBlog, setCurrentBlog] = useState();
+    const [meReady, setMeReady] = useState(false);
+    const [meError, setMeError] = useState(null);
+
+    useEffect(() => {
+        if (!auth.isAuthenticated || !auth.user?.access_token) {
+            setMeReady(false);
+            setMeError(null);
+            return;
+        }
+
+        let cancelled = false;
+        setMeReady(false);
+        setMeError(null);
+
+        ensureMe(auth.user.access_token)
+            .then(() => {
+                if (!cancelled) setMeReady(true);
+            })
+            .catch(async (e) => {
+                if (cancelled) return;
+                setMeError(e.message);
+                // Dead/ghost token after Keycloak reset, clear local session
+                if (String(e.message).includes('(401)')) {
+                    await auth.removeUser();
+                }
+            });
+
+        return () => { cancelled = true; };
+    }, [auth.isAuthenticated, auth.user?.access_token]);
 
     if (auth.isLoading) {
         return <div>Loading holding patterns...</div>;
@@ -31,6 +60,14 @@ export default function App() {
                 </button>
             </div>
         );
+    }
+
+    if (meError) {
+        return <div>Could not sync account: {meError}</div>;
+    }
+
+    if (!meReady) {
+        return <div>Setting up your account...</div>;
     }
 
     const token = auth.user.access_token;

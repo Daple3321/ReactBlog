@@ -7,7 +7,9 @@ public class User
     public string? DisplayName { get; set; }
     public string? Email { get; set; }
     public DateTime CreatedAt { get; set; }
-    
-    // should be <User>?
-    public List<Follow>? Follows { get; set; } = new();
+
+    public List<Blog>? Blogs { get; set; } = null;
+
+    public List<Follow> Following { get; set; } = [];
+    public List<Follow> Followers { get; set; } = [];
 }

@@ -6,22 +6,34 @@ namespace ReactBlog.Server.Services;
 
 public interface IUserService
 {
-    Task<User?> GetUser(string userId);
+    Task<User?> GetUserById(string userId);
+    Task<User?> GetUserByName(string userName);
     Task<PagedResult<User>> GetUsers(int page = 1, int pageSize = 10);
-    Task<PagedResult<Blog>> GetUserBlogs(string userId, int page = 1, int pageSize = 10);
+    Task<PagedResult<Blog>?> GetUserBlogs(string userId, int page = 1, int pageSize = 10);
 
-    Task<User?> CreateUser(User newUser);
+    Task<User> EnsureUser(User newUser);
 }
 
 public class UserService(ILogger<UserService> logger, BlogContext context) : IUserService
 {
-    public async Task<User?> GetUser(string userId)
+    public async Task<User?> GetUserById(string userId)
     {
-        var user = await context.Users
+        return await context.Users
             .AsNoTracking()
+            .Include(x => x.Following)
+            .Include(x => x.Followers)
+            .Include(x => x.Blogs)
             .FirstOrDefaultAsync(x => x.Id == userId);
+    }
 
-        return user;
+    public async Task<User?> GetUserByName(string userName)
+    {
+        return await context.Users
+            .AsNoTracking()
+            .Include(x => x.Following)
+            .Include(x => x.Followers)
+            .Include(x => x.Blogs)
+            .FirstOrDefaultAsync(x => x.Username == userName);
     }
 
     public async Task<PagedResult<User>> GetUsers(int page = 1, int pageSize = 10)
@@ -34,34 +46,47 @@ public class UserService(ILogger<UserService> logger, BlogContext context) : IUs
             .Take(pageSize)
             .AsNoTracking()
             .ToListAsync();
-        
+
         return new PagedResult<User>(users, totalItems, page, pageSize);
     }
 
-    public async Task<PagedResult<Blog>> GetUserBlogs(string userId, int page = 1, int pageSize = 10)
+    public async Task<PagedResult<Blog>?> GetUserBlogs(string userName, int page = 1, int pageSize = 10)
     {
+        var user = await GetUserByName(userName);
+        if (user == null) return null;
+
         int itemsToSkip = (page - 1) * pageSize;
-        int totalItems = await context.Users.CountAsync();
-        
+        int totalItems = await context.Blogs.CountAsync(x => x.OwnerId == user.Id);
+
         var blogs = await context.Blogs
             .AsNoTracking()
+            .Where(x => x.OwnerId == user.Id)
             .Skip(itemsToSkip)
             .Take(pageSize)
-            .Where(x => x.OwnerId == userId)
             .ToListAsync();
 
         return new PagedResult<Blog>(blogs, totalItems, page, pageSize);
     }
 
-    public async Task<User?> CreateUser(User newUser)
+    public async Task<User> EnsureUser(User newUser)
     {
-        var prevUser = await GetUser(newUser.Id);
-        if (prevUser != null) return null;
+        var existing = await context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == newUser.Id);
+        if (existing != null) return existing;
 
         context.Users.Add(newUser);
 
-        await context.SaveChangesAsync();
-        
-        return newUser;
+        try
+        {
+            await context.SaveChangesAsync();
+            logger.LogInformation("Created user {UserId} ({Username})", newUser.Id, newUser.Username);
+            return newUser;
+        }
+        catch (DbUpdateException)
+        {
+            context.ChangeTracker.Clear();
+            return await context.Users.AsNoTracking().FirstAsync(x => x.Id == newUser.Id);
+        }
     }
 }

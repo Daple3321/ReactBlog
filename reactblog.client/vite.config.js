@@ -47,7 +47,7 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            '^/blogs': {
+            '^/(blogs|me|users)': {
                 target,
                 secure: false,
                 changeOrigin: true

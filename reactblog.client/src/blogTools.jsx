@@ -45,6 +45,14 @@ export function authorizedFetch(url, token, options = {}) {
     });
 }
 
+export async function ensureMe(token) {
+    const response = await authorizedFetch('/me', token, { method: 'POST' });
+    if (!response.ok) {
+        throw new Error(`Failed to ensure user (${response.status})`);
+    }
+    return response.json();
+}
+
 export async function getBlog(blogId, token) {
     const response = await authorizedFetch(`/blogs/${blogId}`, token, {
             method: "GET",
