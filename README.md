@@ -1,5 +1,7 @@
 # ReactBlog
 
+<img width="2555" height="1258" alt="reactBlog_pic" src="https://github.com/user-attachments/assets/e255ce86-8be0-4b2f-9583-c269c4b8743a" />
+
 Платформа для ведения блогов с фронтендом на React и бэкендом на ASP.NET Core. Пользователи могут публиковать записи, находить авторов, просматривать их профили и подписываться друг на друга.
 
 ## Возможности
