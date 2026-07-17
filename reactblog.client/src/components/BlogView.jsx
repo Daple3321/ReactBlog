@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
-
-function BlogView({ blog, onEditClick, onRemoveClick }) {
+function BlogView({ blog, canEdit, onEditClick, onRemoveClick }) {
     if (blog != null) {
         const createdDate = new Date(blog.createdAt).toLocaleString();
         const updatedDate = new Date(blog.lastUpdatedAt).toLocaleString();
@@ -20,14 +18,16 @@ function BlogView({ blog, onEditClick, onRemoveClick }) {
                 
                 <article id="blogContent">{blog.content}</article>
                 
-                <ul>
-                    <li id="editBlog" style={{ display: 'inline-block', padding: '14px 16px' }}>
-                        <button onClick={() => onEditClick(blog)}>Edit</button>
-                    </li>
-                    <li id="removeBlog" style={{ display: 'inline-block', padding: '14px 16px' }}>
-                        <button onClick={()=>onRemoveClick(blog)}>Remove</button>
-                    </li>
-                </ul>
+                {canEdit && (
+                    <ul>
+                        <li id="editBlog" style={{ display: 'inline-block', padding: '14px 16px' }}>
+                            <button onClick={() => onEditClick(blog)}>Edit</button>
+                        </li>
+                        <li id="removeBlog" style={{ display: 'inline-block', padding: '14px 16px' }}>
+                            <button onClick={()=>onRemoveClick(blog)}>Remove</button>
+                        </li>
+                    </ul>
+                )}
             </div>
         );
     }

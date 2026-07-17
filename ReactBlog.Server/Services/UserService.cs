@@ -10,8 +10,21 @@ public interface IUserService
     Task<User?> GetUserByName(string userName);
     Task<PagedResult<User>> GetUsers(int page = 1, int pageSize = 10);
     Task<PagedResult<Blog>?> GetUserBlogs(string userId, int page = 1, int pageSize = 10);
+    Task<List<UserSummary>> GetFollowers(string userName);
+    Task<List<UserSummary>> GetFollowing(string userName);
+    Task<FollowResult> FollowUser(string followerId, string userName);
+    Task<FollowResult> UnfollowUser(string followerId, string userName);
 
     Task<User> EnsureUser(User newUser);
+}
+
+public record UserSummary(string Id, string Username);
+
+public enum FollowResult
+{
+    Success,
+    TargetNotFound,
+    CannotFollowSelf
 }
 
 public class UserService(ILogger<UserService> logger, BlogContext context) : IUserService
@@ -66,6 +79,80 @@ public class UserService(ILogger<UserService> logger, BlogContext context) : IUs
             .ToListAsync();
 
         return new PagedResult<Blog>(blogs, totalItems, page, pageSize);
+    }
+
+    public async Task<List<UserSummary>> GetFollowers(string userName)
+    {
+        var userId = await GetUserId(userName);
+        if (userId == null) return [];
+
+        return await context.Follows
+            .Where(follow => follow.FollowingId == userId)
+            .Join(
+                context.Users,
+                follow => follow.FollowerId,
+                user => user.Id,
+                (_, user) => user)
+            .OrderBy(user => user.Username)
+            .Select(user => new UserSummary(user.Id, user.Username))
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<List<UserSummary>> GetFollowing(string userName)
+    {
+        var userId = await GetUserId(userName);
+        if (userId == null) return [];
+
+        return await context.Follows
+            .Where(follow => follow.FollowerId == userId)
+            .Join(
+                context.Users,
+                follow => follow.FollowingId,
+                user => user.Id,
+                (_, user) => user)
+            .OrderBy(user => user.Username)
+            .Select(user => new UserSummary(user.Id, user.Username))
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<FollowResult> FollowUser(string followerId, string userName)
+    {
+        var followingId = await GetUserId(userName);
+        if (followingId == null) return FollowResult.TargetNotFound;
+        if (followingId == followerId) return FollowResult.CannotFollowSelf;
+
+        var alreadyFollowing = await context.Follows
+            .AnyAsync(follow => follow.FollowerId == followerId && follow.FollowingId == followingId);
+        if (alreadyFollowing) return FollowResult.Success;
+
+        context.Follows.Add(new Follow(followerId, followingId));
+        await context.SaveChangesAsync();
+        return FollowResult.Success;
+    }
+
+    public async Task<FollowResult> UnfollowUser(string followerId, string userName)
+    {
+        var followingId = await GetUserId(userName);
+        if (followingId == null) return FollowResult.TargetNotFound;
+
+        var follow = await context.Follows.FindAsync(followerId, followingId);
+        if (follow != null)
+        {
+            context.Follows.Remove(follow);
+            await context.SaveChangesAsync();
+        }
+
+        return FollowResult.Success;
+    }
+
+    private async Task<string?> GetUserId(string userName)
+    {
+        return await context.Users
+            .Where(user => user.Username == userName)
+            .Select(user => user.Id)
+            .FirstOrDefaultAsync();
     }
 
     public async Task<User> EnsureUser(User newUser)

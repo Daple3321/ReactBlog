@@ -18,6 +18,9 @@
     width: 100%;
     margin: 0;
     padding: 1rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
     background-color: #483358d9;
 }
 
@@ -39,6 +42,11 @@
 }
 #barElement a:hover {
     background-color: #74439ad9;
+}
+
+#logoutElement {
+    margin-left: auto;
+    list-style: none;
 }
 
 th, td {
@@ -90,6 +98,54 @@ td {
     margin: 0;
     font-size: 0.78rem;
     opacity: 0.55;
+}
+
+/* profiles and user discovery */
+.profile-heading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.profile-connections {
+    max-width: 800px;
+    margin: 2rem auto 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+    text-align: left;
+}
+
+.user-list {
+    list-style: none;
+    padding: 0;
+}
+
+.user-link {
+    width: 100%;
+    padding: 0.55rem 0;
+    border: 0;
+    border-bottom: 1px solid rgba(106, 69, 168, 0.3);
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.user-link:hover {
+    color: #b68bd7;
+}
+
+.error-message {
+    color: salmon;
+}
+
+@media (max-width: 600px) {
+    .profile-connections {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* new blog form */

@@ -65,3 +65,43 @@ export async function removeBlog(blogId, token) {
             method: "DELETE",
         });
 }
+
+async function getJson(url, token) {
+    const response = await authorizedFetch(url, token);
+    if (!response.ok) throw new Error(`Request failed (${response.status})`);
+    return response.json();
+}
+
+export function getUsers(token) {
+    return getJson('/users', token);
+}
+
+export function getUser(username, token) {
+    return getJson(`/users/${encodeURIComponent(username)}`, token);
+}
+
+export function getUserBlogs(username, token) {
+    return getJson(`/users/${encodeURIComponent(username)}/blogs`, token);
+}
+
+export function getFollowers(username, token) {
+    return getJson(`/users/${encodeURIComponent(username)}/followers`, token);
+}
+
+export function getFollowing(username, token) {
+    return getJson(`/users/${encodeURIComponent(username)}/following`, token);
+}
+
+export async function followUser(username, token) {
+    const response = await authorizedFetch(`/users/${encodeURIComponent(username)}/follow`, token, {
+        method: 'POST',
+    });
+    if (!response.ok) throw new Error(`Could not follow user (${response.status})`);
+}
+
+export async function unfollowUser(username, token) {
+    const response = await authorizedFetch(`/users/${encodeURIComponent(username)}/follow`, token, {
+        method: 'DELETE',
+    });
+    if (!response.ok) throw new Error(`Could not unfollow user (${response.status})`);
+}
